@@ -15,6 +15,12 @@ public class Award {
 
     private String description;
 
+    public Award(String description, String title, int days) {
+        this.description = description;
+        this.title = title;
+        this.days = days;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (o == null || getClass() != o.getClass()) {
