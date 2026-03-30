@@ -21,6 +21,9 @@ public class MoodContent {
         this.text = s;
     }
 
+    public MoodContent() {
+    }
+
     public Mood getMood() {
         return mood;
     }

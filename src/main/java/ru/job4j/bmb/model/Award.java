@@ -21,6 +21,9 @@ public class Award {
         this.days = days;
     }
 
+    public Award() {
+    }
+
     @Override
     public boolean equals(Object o) {
         if (o == null || getClass() != o.getClass()) {
