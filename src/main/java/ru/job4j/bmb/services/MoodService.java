@@ -2,10 +2,13 @@ package ru.job4j.bmb.services;
 
 import org.springframework.stereotype.Service;
 import ru.job4j.bmb.content.Content;
+import ru.job4j.bmb.model.Award;
+import ru.job4j.bmb.model.Mood;
 import ru.job4j.bmb.model.MoodLog;
 import ru.job4j.bmb.model.User;
 import ru.job4j.bmb.repository.AchievementRepository;
 import ru.job4j.bmb.repository.MoodLogRepository;
+import ru.job4j.bmb.repository.MoodRepository;
 import ru.job4j.bmb.repository.UserRepository;
 
 import java.time.Instant;
@@ -23,29 +26,69 @@ public class MoodService {
     private final DateTimeFormatter formatter = DateTimeFormatter
             .ofPattern("dd-MM-yyyy HH:mm")
             .withZone(ZoneId.systemDefault());
+    private final MoodRepository moodRepository;
 
     public MoodService(MoodLogRepository moodLogRepository,
                        RecommendationEngine recommendationEngine,
                        UserRepository userRepository,
-                       AchievementRepository achievementRepository) {
+                       AchievementRepository achievementRepository,
+                       MoodRepository moodRepository) {
         this.moodLogRepository = moodLogRepository;
         this.recommendationEngine = recommendationEngine;
         this.userRepository = userRepository;
         this.achievementRepository = achievementRepository;
+        this.moodRepository = moodRepository;
     }
 
-    public Content chooseMood(User user, Long moodId) {
-        return recommendationEngine.recommendFor(user.getChatId(), moodId);
+    public void chooseMood(User user, Long moodId) {
+        Optional<Mood> mood = moodRepository.findById(moodId);
+        if (mood.isPresent()) {
+            MoodLog moodLog = new MoodLog();
+            moodLog.setUser(user);
+            moodLog.setMood(mood.get());
+            moodLog.setCreatedAt(System.currentTimeMillis());
+            moodLogRepository.save(moodLog);
+        }
     }
 
-    public Optional<Content> weekMoodLogCommand(long chatId, Long clientId) {
-        var content = new Content(chatId);
-        return Optional.of(content);
+    public MoodLogRepository weekMoodLogCommand(long chatId, Long clientId) {
+        MoodLogRepository localRep = null;
+        User user = null;
+        long threshHold = System.currentTimeMillis() - 7 * 24 * 3600 * 1000;
+        for (var tmpUser : userRepository.findAll()) {
+            if (tmpUser != null && tmpUser.getChatId() == chatId) {
+                user = tmpUser;
+                break;
+            }
+        }
+        if (user != null) {
+            for (var item : moodLogRepository.findAll()) {
+                if (item.getUser().equals(user) && item.getCreatedAt() >= threshHold) {
+                    localRep.save(item);
+                }
+            }
+        }
+        return localRep;
     }
 
-    public Optional<Content> monthMoodLogCommand(long chatId, Long clientId) {
-        var content = new Content(chatId);
-        return Optional.of(content);
+    public MoodLogRepository monthMoodLogCommand(long chatId, Long clientId) {
+        MoodLogRepository localRep = null;
+        User user = null;
+        long threshHold = System.currentTimeMillis() - 30 * 7 * 24 * 3600 * 1000;
+        for (var tmpUser : userRepository.findAll()) {
+            if (tmpUser != null && tmpUser.getChatId() == chatId) {
+                user = tmpUser;
+                break;
+            }
+        }
+        if (user != null) {
+            for (var item : moodLogRepository.findAll()) {
+                if (item.getUser().equals(user) && item.getCreatedAt() >= threshHold) {
+                    localRep.save(item);
+                }
+            }
+        }
+        return localRep;
     }
 
     private String formatMoodLogs(List<MoodLog> logs, String title) {
@@ -60,8 +103,22 @@ public class MoodService {
         return sb.toString();
     }
 
-    public Optional<Content> awards(long chatId, Long clientId) {
-        var content = new Content(chatId);
-        return Optional.of(content);
+    public List<Award> awards(long chatId, Long clientId) {
+        List<Award> awards = null;
+        User user = null;
+        for (var tmpUser : userRepository.findAll()) {
+            if (tmpUser != null && tmpUser.getChatId() == chatId) {
+                user = tmpUser;
+                break;
+            }
+        }
+        if (user != null) {
+            for (var item : achievementRepository.findAll()) {
+                if (item.getUser().equals(user)) {
+                    awards.add(item.getAward());
+                }
+            }
+        }
+        return awards;
     }
 }
