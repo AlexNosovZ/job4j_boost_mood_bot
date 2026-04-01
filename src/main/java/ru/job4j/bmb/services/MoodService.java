@@ -53,15 +53,10 @@ public class MoodService {
 
     public MoodLogRepository weekMoodLogCommand(long chatId, Long clientId) {
         MoodLogRepository localRep = null;
-        User user = null;
+        Optional<User> user;
         long threshHold = System.currentTimeMillis() - 7 * 24 * 3600 * 1000;
-        for (var tmpUser : userRepository.findAll()) {
-            if (tmpUser != null && tmpUser.getChatId() == chatId) {
-                user = tmpUser;
-                break;
-            }
-        }
-        if (user != null) {
+        user = userRepository.findByClientId(clientId);
+        if (user.isPresent()) {
             for (var item : moodLogRepository.findAll()) {
                 if (item.getUser().equals(user) && item.getCreatedAt() >= threshHold) {
                     localRep.save(item);
@@ -73,15 +68,10 @@ public class MoodService {
 
     public MoodLogRepository monthMoodLogCommand(long chatId, Long clientId) {
         MoodLogRepository localRep = null;
-        User user = null;
+        Optional<User> user;
         long threshHold = System.currentTimeMillis() - 30 * 7 * 24 * 3600 * 1000;
-        for (var tmpUser : userRepository.findAll()) {
-            if (tmpUser != null && tmpUser.getChatId() == chatId) {
-                user = tmpUser;
-                break;
-            }
-        }
-        if (user != null) {
+        user = userRepository.findByClientId(clientId);
+        if (user.isPresent()) {
             for (var item : moodLogRepository.findAll()) {
                 if (item.getUser().equals(user) && item.getCreatedAt() >= threshHold) {
                     localRep.save(item);
