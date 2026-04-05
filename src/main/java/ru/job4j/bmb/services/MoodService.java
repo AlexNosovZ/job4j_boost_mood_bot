@@ -2,10 +2,7 @@ package ru.job4j.bmb.services;
 
 import org.springframework.stereotype.Service;
 import ru.job4j.bmb.content.Content;
-import ru.job4j.bmb.model.Award;
-import ru.job4j.bmb.model.Mood;
-import ru.job4j.bmb.model.MoodLog;
-import ru.job4j.bmb.model.User;
+import ru.job4j.bmb.model.*;
 import ru.job4j.bmb.repository.AchievementRepository;
 import ru.job4j.bmb.repository.MoodLogRepository;
 import ru.job4j.bmb.repository.MoodRepository;
@@ -40,7 +37,7 @@ public class MoodService {
         this.moodRepository = moodRepository;
     }
 
-    public void chooseMood(User user, Long moodId) {
+    public Content chooseMood(User user, Long moodId) {
         Optional<Mood> mood = moodRepository.findById(moodId);
         if (mood.isPresent()) {
             MoodLog moodLog = new MoodLog();
@@ -49,36 +46,39 @@ public class MoodService {
             moodLog.setCreatedAt(System.currentTimeMillis());
             moodLogRepository.save(moodLog);
         }
+        return recommendationEngine.recommendFor(user.getChatId(), moodId);
     }
 
-    public MoodLogRepository weekMoodLogCommand(long chatId, Long clientId) {
-        MoodLogRepository localRep = null;
+    public Optional<Content> weekMoodLogCommand(long chatId, Long clientId) {
         Optional<User> user;
         long threshHold = System.currentTimeMillis() - 7 * 24 * 3600 * 1000;
         user = userRepository.findByClientId(clientId);
+        String formatedLog = null;
         if (user.isPresent()) {
-            for (var item : moodLogRepository.findAll()) {
-                if (item.getUser().equals(user) && item.getCreatedAt() >= threshHold) {
-                    localRep.save(item);
-                }
-            }
+            formatedLog = formatMoodLogs(moodLogRepository.findAll().stream()
+                    .filter(item -> item.getUser().equals(user.get()))
+                    .filter(item -> item.getCreatedAt() == threshHold)
+                    .toList(), "week log");
         }
-        return localRep;
+        Content content = new Content(chatId);
+        content.setText(formatedLog);
+        return Optional.of(content);
     }
 
-    public MoodLogRepository monthMoodLogCommand(long chatId, Long clientId) {
-        MoodLogRepository localRep = null;
+    public Optional<Content> monthMoodLogCommand(long chatId, Long clientId) {
         Optional<User> user;
-        long threshHold = System.currentTimeMillis() - 30 * 7 * 24 * 3600 * 1000;
+        long threshHold = System.currentTimeMillis() - 30 * 24 * 3600 * 1000;
         user = userRepository.findByClientId(clientId);
+        String formatedLog = null;
         if (user.isPresent()) {
-            for (var item : moodLogRepository.findAll()) {
-                if (item.getUser().equals(user) && item.getCreatedAt() >= threshHold) {
-                    localRep.save(item);
-                }
-            }
+            formatedLog = formatMoodLogs(moodLogRepository.findAll().stream()
+                    .filter(item -> item.getUser().equals(user.get()))
+                    .filter(item -> item.getCreatedAt() == threshHold)
+                    .toList(), "month log");
         }
-        return localRep;
+        Content content = new Content(chatId);
+        content.setText(formatedLog);
+        return Optional.of(content);
     }
 
     private String formatMoodLogs(List<MoodLog> logs, String title) {
@@ -93,22 +93,30 @@ public class MoodService {
         return sb.toString();
     }
 
-    public List<Award> awards(long chatId, Long clientId) {
-        List<Award> awards = null;
-        User user = null;
-        for (var tmpUser : userRepository.findAll()) {
-            if (tmpUser != null && tmpUser.getChatId() == chatId) {
-                user = tmpUser;
-                break;
-            }
+    private String formatAwardLogs(List<Achievement> logs, String title) {
+        if (logs.isEmpty()) {
+            return title + ":\nNo awards logs found.";
         }
-        if (user != null) {
-            for (var item : achievementRepository.findAll()) {
-                if (item.getUser().equals(user)) {
-                    awards.add(item.getAward());
-                }
-            }
+        var sb = new StringBuilder(title + ":\n");
+        logs.forEach(log -> {
+            String formattedDate = formatter.format(Instant.ofEpochSecond(log.getCreateAt()));
+            sb.append(formattedDate).append(": ").append(log.getAward().getTitle()).append("\n");
+        });
+        return sb.toString();
+    }
+
+    public Optional<Content> awards(long chatId, Long clientId) {
+        Optional<User> user;
+        String awardLog = null;
+        user = userRepository.findByClientId(clientId);
+        if (user.isPresent()) {
+            awardLog = formatAwardLogs(achievementRepository.findAll().stream()
+                    .filter(item -> item.getUser().equals(user.get()))
+                    .toList(), "awards log");
+
         }
-        return awards;
+        Content content = new Content(chatId);
+        content.setText(awardLog);
+        return Optional.of(content);
     }
 }
