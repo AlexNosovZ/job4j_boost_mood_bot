@@ -57,7 +57,7 @@ public class MoodService {
         if (user.isPresent()) {
             formatedLog = formatMoodLogs(moodLogRepository.findAll().stream()
                     .filter(item -> item.getUser().equals(user.get()))
-                    .filter(item -> item.getCreatedAt() == threshHold)
+                    .filter(item -> item.getCreatedAt() >= threshHold)
                     .toList(), "week log");
         }
         Content content = new Content(chatId);
@@ -73,7 +73,7 @@ public class MoodService {
         if (user.isPresent()) {
             formatedLog = formatMoodLogs(moodLogRepository.findAll().stream()
                     .filter(item -> item.getUser().equals(user.get()))
-                    .filter(item -> item.getCreatedAt() == threshHold)
+                    .filter(item -> item.getCreatedAt() >= threshHold)
                     .toList(), "month log");
         }
         Content content = new Content(chatId);
