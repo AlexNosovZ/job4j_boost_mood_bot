@@ -16,7 +16,7 @@ public class TelegramBotService implements BeanNameAware {
     }
 
     public void receive(Content content) {
-        handler.receive(content);
+//        handler.receive(content);
     }
 
     @PostConstruct
