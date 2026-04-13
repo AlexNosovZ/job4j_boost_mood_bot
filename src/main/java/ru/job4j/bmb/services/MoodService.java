@@ -1,12 +1,11 @@
 package ru.job4j.bmb.services;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import ru.job4j.bmb.content.Content;
+import ru.job4j.bmb.event.UserEvent;
 import ru.job4j.bmb.model.*;
-import ru.job4j.bmb.repository.AchievementRepository;
-import ru.job4j.bmb.repository.MoodLogRepository;
-import ru.job4j.bmb.repository.MoodRepository;
-import ru.job4j.bmb.repository.UserRepository;
+import ru.job4j.bmb.repository.*;
 
 import java.time.Instant;
 import java.time.ZoneId;
@@ -24,17 +23,23 @@ public class MoodService {
             .ofPattern("dd-MM-yyyy HH:mm")
             .withZone(ZoneId.systemDefault());
     private final MoodRepository moodRepository;
+    private final AwardRepository awardRepository;
+    private final ApplicationEventPublisher publisher;
 
     public MoodService(MoodLogRepository moodLogRepository,
                        RecommendationEngine recommendationEngine,
                        UserRepository userRepository,
                        AchievementRepository achievementRepository,
-                       MoodRepository moodRepository) {
+                       MoodRepository moodRepository,
+                       ApplicationEventPublisher publisher,
+                       AwardRepository awardRepository) {
         this.moodLogRepository = moodLogRepository;
         this.recommendationEngine = recommendationEngine;
         this.userRepository = userRepository;
         this.achievementRepository = achievementRepository;
         this.moodRepository = moodRepository;
+        this.publisher = publisher;
+        this.awardRepository = awardRepository;
     }
 
     public Content chooseMood(User user, Long moodId) {
@@ -45,6 +50,7 @@ public class MoodService {
             moodLog.setMood(mood.get());
             moodLog.setCreatedAt(System.currentTimeMillis());
             moodLogRepository.save(moodLog);
+            publisher.publishEvent(new UserEvent(this, user));
         }
         return recommendationEngine.recommendFor(user.getChatId(), moodId);
     }
@@ -118,5 +124,17 @@ public class MoodService {
         Content content = new Content(chatId);
         content.setText(awardLog);
         return Optional.of(content);
+    }
+
+    public MoodLogRepository getMoodLogRepository() {
+        return this.moodLogRepository;
+    }
+
+    public  AwardRepository getAwardRepository() {
+        return this.awardRepository;
+    }
+
+    public AchievementRepository getAchievementRepository() {
+        return this.achievementRepository;
     }
 }
