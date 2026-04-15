@@ -25,24 +25,9 @@ public class AchievementService implements ApplicationListener<UserEvent> {
     public void onApplicationEvent(UserEvent event) {
         var user = event.getUser();
         MoodService moodService = (MoodService) event.getSource();
-        if (user != null) {
-            Stream<MoodLog> moodLogStream = moodService
-                    .getMoodLogRepository()
-                    .findByUserIdOrderByCreatedAtDesc(user.getId());
-            long count = moodLogStream
-                    .takeWhile(item -> item.getMood()
-                            .isGood())
-                    .count();
-            AwardRepository awardRepository = moodService.getAwardRepository();
-            for (var award : awardRepository.findAll()) {
-                if (award.getDays() <= count) {
-                    Achievement achievement = new Achievement();
-                    achievement.setAward(award);
-                    achievement.setUser(user);
-                    achievement.setCreateAt(System.currentTimeMillis());
-                    moodService.getAchievementRepository().save(achievement);
-                }
-            }
+        long count = moodService.getGoodDays(user);
+        if (count != -1) {
+            moodService.getAchievements(user, count);
             Optional<Content> content = moodService.awards(user.getChatId(), user.getClientId());
             if (content.isPresent()) {
                 sentContent.sent(content.get());

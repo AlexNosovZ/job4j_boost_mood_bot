@@ -126,15 +126,27 @@ public class MoodService {
         return Optional.of(content);
     }
 
-    public MoodLogRepository getMoodLogRepository() {
-        return this.moodLogRepository;
+    public long getGoodDays(User user) {
+        if (user != null) {
+            return moodLogRepository
+                    .findByUserIdOrderByCreatedAtDesc(user.getId())
+                    .takeWhile(item -> item.getMood()
+                            .isGood())
+                    .count();
+        }
+        return -1;
     }
 
-    public  AwardRepository getAwardRepository() {
-        return this.awardRepository;
+    public void getAchievements(User user, long count) {
+        for (var award : awardRepository.findAll()) {
+            if (award.getDays() <= count) {
+                Achievement achievement = new Achievement();
+                achievement.setAward(award);
+                achievement.setUser(user);
+                achievement.setCreateAt(System.currentTimeMillis());
+                achievementRepository.save(achievement);
+            }
+        }
     }
 
-    public AchievementRepository getAchievementRepository() {
-        return this.achievementRepository;
-    }
 }
